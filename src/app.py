@@ -20,6 +20,8 @@ app.mount("/static", StaticFiles(directory=os.path.join(Path(__file__).parent,
           "static")), name="static")
 
 # In-memory activity database
+import threading
+
 activities = {
     "Chess Club": {
         "description": "Learn strategies and compete in chess tournaments",
@@ -40,6 +42,7 @@ activities = {
         "participants": ["john@mergington.edu", "olivia@mergington.edu"]
     }
 }
+activities_lock = threading.Lock()
 
 
 @app.get("/")
@@ -55,20 +58,22 @@ def get_activities():
 @app.post("/activities/{activity_name}/signup")
 def signup_for_activity(activity_name: str, email: str):
     """Sign up a student for an activity"""
-    # Validate activity exists
-    if activity_name not in activities:
-        raise HTTPException(status_code=404, detail="Activity not found")
+    with activities_lock:
+        # Validate activity exists
+        if activity_name not in activities:
+            raise HTTPException(status_code=404, detail="Activity not found")
 
-    # Get the specific activity
-    activity = activities[activity_name]
+        # Get the specific activity
+        activity = activities[activity_name]
 
-    # Validate student is not already signed up
-    if email in activity["participants"]:
-        raise HTTPException(status_code=400, detail="Student already signed up for this activity")
-    
-    # Validate activity is not full    if len(activity["participants"]) >= activity["max_participants"]:
-        raise HTTPException(status_code=400, detail="Activity is full")
+        # Validate student is not already signed up
+        if email in activity["participants"]:
+            raise HTTPException(status_code=400, detail="Student already signed up for this activity")
+        
+        # Validate activity is not full
+        if len(activity["participants"]) >= activity["max_participants"]:
+            raise HTTPException(status_code=400, detail="Activity is full")
 
-    # Add student
-    activity["participants"].append(email)
+        # Add student
+        activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
