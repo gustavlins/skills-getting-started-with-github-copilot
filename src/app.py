@@ -109,7 +109,12 @@ def signup_for_activity(activity_name: str, email: str):
         # Validate activity is not full
         if len(activity["participants"]) >= activity["max_participants"]:
             raise HTTPException(status_code=400, detail="Activity is full")
-
+        
+        # Validate student is not already signed up for another activity at the same time
+        for other_activity in activities.values():
+            if email in other_activity["participants"] and other_activity["schedule"] == activity["schedule"]:
+                raise HTTPException(status_code=400, detail="Student already signed up for another activity at the same time")
+        
         # Add student
         activity["participants"].append(email)
     return {"message": f"Signed up {email} for {activity_name}"}
